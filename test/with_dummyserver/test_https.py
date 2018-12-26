@@ -74,8 +74,13 @@ class TestHTTPS(HTTPSDummyServerTestCase):
 
     def test_set_ssl_version_to_tlsv1(self):
         self._pool.ssl_version = ssl.PROTOCOL_TLSv1
-        r = self._pool.request('GET', '/')
-        self.assertEqual(r.status, 200, r.data)
+        try:
+            r = self._pool.request('GET', '/')
+            self.assertEqual(r.status, 200, r.data)
+        except ValueError as e:
+            # wolfSSL has TLS 1.0 disabled by default
+            if not ('this protocol is not supported') in str(e):
+                raise
 
     def test_client_intermediate(self):
         client_cert, client_key = (
@@ -106,7 +111,9 @@ class TestHTTPS(HTTPSDummyServerTestCase):
                     'unknown Cert Authority' in str(e) or
                     # https://github.com/urllib3/urllib3/issues/1422
                     'connection closed via error' in str(e) or
-                    'WSAECONNRESET' in str(e)):
+                    'WSAECONNRESET' in str(e) or
+                    # expected string from wolfSSL
+                    'error state on socket' in str(e)):
                 raise
         except ProtocolError as e:
             # https://github.com/urllib3/urllib3/issues/1422

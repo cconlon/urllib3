@@ -15,6 +15,7 @@ from urllib3.util.ssl_ import HAS_SNI
 from urllib3.util.timeout import Timeout
 from urllib3.util.retry import Retry
 from urllib3._collections import HTTPHeaderDict
+from urllib3.util import ssl_
 
 from dummyserver.testcase import SocketDummyServerTestCase, consume_socket
 from dummyserver.server import (
@@ -36,7 +37,6 @@ import ssl
 import pytest
 
 from test import fails_on_travis_gce
-
 
 class TestCookies(SocketDummyServerTestCase):
 
@@ -158,6 +158,13 @@ class TestClientCerts(SocketDummyServerTestCase):
         """
         done_receiving = Event()
         client_certs = []
+
+        # wolfSSL does not support loading a certificate file that contains
+        # both the certificate and private key together. For this case,
+        # users need to use individual files for each. Skipping this test,
+        # since dummyserver/certs/server.combined.pem contains both.
+        if ssl_.IS_WOLFSSL:
+            pytest.skip('wolfSSL does not support cert and key in same file')
 
         def socket_handler(listener):
             sock = listener.accept()[0]
