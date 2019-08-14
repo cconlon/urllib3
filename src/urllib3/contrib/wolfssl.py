@@ -129,7 +129,7 @@ class WrappedSocket(object):
         try:
             data = self.connection.recv(*args, **kwargs)
         except wolfssl.SSLWantReadError:
-            if not util.wait_for_read(self.socket, self.socket.gettimeout()):
+            if not util.wait_for_read(self.socket, self.connection.gettimeout()):
                 raise timeout('The read operation timed out')
             else:
                 return self.recv(*args, **kwargs)
@@ -137,10 +137,18 @@ class WrappedSocket(object):
             return data
 
     def recv_into(self, *args, **kwargs):
-        return self.connection.recv_into(*args, **kwargs)
+        try:
+            data = self.connection.recv_into(*args, **kwargs)
+        except wolfssl.SSLWantReadError:
+            if not util.wait_for_read(self.socket, self.connection.gettimeout()):
+                raise timeout('The read operation timed out')
+            else:
+                return self.recv_into(*args, **kwargs)
+        else:
+            return data
 
     def settimeout(self, timeout):
-        return self.socket.settimeout(timeout)
+        return self.connection.settimeout(timeout)
 
     def sendall(self, data):
         self.connection.sendall(data)
@@ -182,7 +190,7 @@ class wolfSSLContext(object):
     """
     Wrapper class for wolfssl-py ``Context`` object. Responsible for translating
     the interface of the standard library ``SSLContext`` object
-    to calls into wolfSSL>
+    to calls into wolfSSL
     """
     def __init__(self, protocol):
         self.protocol = _wolfssl_versions[protocol]
