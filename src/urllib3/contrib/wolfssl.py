@@ -150,8 +150,20 @@ class WrappedSocket(object):
     def settimeout(self, timeout):
         return self.connection.settimeout(timeout)
 
+    def _send_until_done(self, data):
+        while True:
+            try:
+                return self.connection.send(data)
+            except wolfssl.SSLWantWriteError:
+                if not util.wait_for_write(self.socket, self.connection.gettimeout()):
+                    raise timeout('The write operation timed out')
+                continue
+
     def sendall(self, data):
-        self.connection.sendall(data)
+        total_sent = 0
+        while total_sent < len(data):
+            sent = self.connection.send(data[total_sent:])
+            total_sent += sent
 
     def shutdown(self):
         self.connection.shutdown()
