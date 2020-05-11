@@ -162,7 +162,7 @@ class WrappedSocket(object):
     def sendall(self, data):
         total_sent = 0
         while total_sent < len(data):
-            sent = self.connection.send(data[total_sent:])
+            sent = self._send_until_done(data[total_sent:])
             total_sent += sent
 
     def shutdown(self):
